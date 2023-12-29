@@ -1,0 +1,1 @@
+# lite-compression-tool
