@@ -17,6 +17,7 @@ func main() {
 
 	const chunkSize = 10000
 	buffer := make([]byte, chunkSize)
+	frequencyTable := make(map[byte]int)
 
 	for {
 		n, err := file.Read(buffer)
@@ -28,6 +29,10 @@ func main() {
 			break
 		}
 
-		fmt.Println(string(buffer[:n]))
+		for _, v := range buffer[:n] {
+			frequencyTable[v]++
+		}
 	}
+
+	fmt.Println(frequencyTable)
 }
