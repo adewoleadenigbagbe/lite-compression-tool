@@ -27,14 +27,11 @@ type HuffmanNode struct {
 	weight int64
 }
 
-func main() {
-	file, err := os.Open("lesmiserables.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
+func getFile(filename string) (*os.File, error) {
+	return os.Open(filename)
+}
 
-	defer file.Close()
-
+func calculateCharacterFrequency(file *os.File) (map[byte]int64, error) {
 	const chunkSize = 10000
 	buffer := make([]byte, chunkSize)
 	frequencyTable := make(map[byte]int64)
@@ -42,7 +39,7 @@ func main() {
 	for {
 		n, err := file.Read(buffer)
 		if err != nil && err != io.EOF {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		if err == io.EOF {
@@ -54,24 +51,12 @@ func main() {
 		}
 	}
 
-	var nodes nodeArray
-	for k, v := range frequencyTable {
-		node := node{
-			char:      k,
-			frequency: v,
-		}
-		nodes = append(nodes, node)
-	}
+	return frequencyTable, nil
+}
 
-	if len(nodes) < 2 {
-		fmt.Println("Huffman tree cannot be built with less than two nodes")
-		return
-	}
-
-	//sort the nodes
-	nodes.Sort()
-
+func BuildHuffmanTree(nodes nodeArray) *HuffmanNode {
 	root := &HuffmanNode{}
+
 	for _, n := range nodes {
 		h := &HuffmanNode{
 			char:   n.char,
@@ -102,4 +87,57 @@ func main() {
 
 		root = current
 	}
+
+	return root
+}
+
+func PreOrderTraversal(root *HuffmanNode) {
+	if root == nil {
+		return
+	}
+	fmt.Print(root.weight, " ")
+	PreOrderTraversal(root.left)
+	PreOrderTraversal(root.right)
+}
+
+func main() {
+	var (
+		err            error
+		file           *os.File
+		frequencyTable = make(map[byte]int64)
+	)
+
+	file, err = getFile("lesmiserables.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer file.Close()
+
+	frequencyTable, err = calculateCharacterFrequency(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var nodes nodeArray
+	for k, v := range frequencyTable {
+		node := node{
+			char:      k,
+			frequency: v,
+		}
+		nodes = append(nodes, node)
+	}
+
+	if len(nodes) < 2 {
+		fmt.Println("Huffman tree cannot be built with less than two nodes")
+		return
+	}
+
+	//sort the nodes
+	nodes.Sort()
+
+	tree := BuildHuffmanTree(nodes)
+
+	//pre order traversal
+	PreOrderTraversal(tree)
 }
