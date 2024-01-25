@@ -136,6 +136,7 @@ func main() {
 	//sort the nodes
 	nodes.Sort()
 
+	// build tree
 	tree := BuildHuffmanTree(nodes)
 
 	//pre order traversal
