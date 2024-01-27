@@ -3,28 +3,29 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sort"
 )
 
-type node struct {
-	char      byte
-	frequency int64
-}
+type HuffmanNodeArray []*HuffmanNode
 
-type nodeArray []node
-
-func (n nodeArray) Len() int           { return len(n) }
-func (n nodeArray) Less(i, j int) bool { return n[i].frequency < n[j].frequency }
-func (n nodeArray) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n nodeArray) Sort()              { sort.Sort(n) }
+func (hf HuffmanNodeArray) Len() int           { return len(hf) }
+func (hf HuffmanNodeArray) Less(i, j int) bool { return hf[i].weight < hf[j].weight }
+func (hf HuffmanNodeArray) Swap(i, j int)      { hf[i], hf[j] = hf[j], hf[i] }
+func (hf HuffmanNodeArray) Sort()              { sort.Sort(hf) }
 
 type HuffmanNode struct {
 	left   *HuffmanNode
 	right  *HuffmanNode
 	char   byte
 	weight int64
+}
+
+type HuffmanRow struct {
+	char      string
+	frequency int64
+	code      string
+	bits      int
 }
 
 func getFile(filename string) (*os.File, error) {
@@ -54,76 +55,81 @@ func calculateCharacterFrequency(file *os.File) (map[byte]int64, error) {
 	return frequencyTable, nil
 }
 
-func BuildHuffmanTree(nodes nodeArray) *HuffmanNode {
-	root := &HuffmanNode{}
-
-	for _, n := range nodes {
-		h := &HuffmanNode{
-			char:   n.char,
-			weight: n.frequency,
+func BuildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
+	current := &HuffmanNode{}
+	for i := 0; i < len(nodes); i += 2 {
+		if len(nodes) < 2 {
+			return current
 		}
 
-		if root.left == nil {
-			root.left = h
-			root.weight += h.weight
-			continue
-		} else if root.right == nil {
-			root.right = h
-			root.weight += h.weight
-			continue
-		}
+		current.left = nodes[i]
+		current.right = nodes[i+1]
+		current.weight = current.left.weight + current.right.weight
 
-		current := &HuffmanNode{
-			weight: root.weight + h.weight,
-		}
-
-		if root.weight < h.weight {
-			current.left = root
-			current.right = h
-		} else {
-			current.right = root
-			current.left = h
-		}
-
-		root = current
+		nodes = nodes[i+1:]
+		nodes = append(nodes, current)
+		nodes.Sort()
 	}
 
-	return root
+	return current
 }
 
-func PreOrderTraversal(root *HuffmanNode) {
+func PreOrderTraversal(root *HuffmanNode, table *[]HuffmanRow, frequencyTable map[byte]int64, codes string, code string) {
 	if root == nil {
+		codes = codes[:len(codes)-1]
 		return
 	}
-	fmt.Print(root.weight, " ")
-	PreOrderTraversal(root.left)
-	PreOrderTraversal(root.right)
+
+	codes += code
+	if root.char != 0 {
+		row := HuffmanRow{
+			char:      string(root.char),
+			frequency: frequencyTable[root.char],
+			code:      codes,
+			bits:      len(codes),
+		}
+		*table = append(*table, row)
+	}
+
+	PreOrderTraversal(root.left, table, frequencyTable, codes, "0")
+	PreOrderTraversal(root.right, table, frequencyTable, codes, "1")
 }
 
 func main() {
-	var (
-		err            error
-		file           *os.File
-		frequencyTable = make(map[byte]int64)
-	)
+	// var (
+	// 	err            error
+	// 	file           *os.File
+	// 	frequencyTable = make(map[byte]int64)
+	// )
 
-	file, err = getFile("lesmiserables.txt")
-	if err != nil {
-		log.Fatal(err)
+	// file, err = getFile("lesmiserables.txt")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// defer file.Close()
+
+	// frequencyTable, err = calculateCharacterFrequency(file)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	freqTable := map[byte]int64{
+		67: 32,
+		68: 42,
+		69: 120,
+		75: 7,
+		76: 42,
+		77: 24,
+		85: 37,
+		90: 2,
 	}
 
-	defer file.Close()
-
-	frequencyTable, err = calculateCharacterFrequency(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var nodes nodeArray
-	for k, v := range frequencyTable {
-		node := node{
-			char:      k,
-			frequency: v,
+	var nodes HuffmanNodeArray
+	for k, v := range freqTable {
+		node := &HuffmanNode{
+			char:   k,
+			weight: v,
 		}
 		nodes = append(nodes, node)
 	}
@@ -140,5 +146,11 @@ func main() {
 	tree := BuildHuffmanTree(nodes)
 
 	//pre order traversal
-	PreOrderTraversal(tree)
+	codes := ""
+	var table *[]HuffmanRow = &[]HuffmanRow{}
+	PreOrderTraversal(tree, table, freqTable, codes, "")
+
+	fmt.Println("\nPrinting huffman table")
+
+	fmt.Println(table)
 }
