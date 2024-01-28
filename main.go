@@ -57,16 +57,12 @@ func calculateCharacterFrequency(file *os.File) (map[byte]int64, error) {
 
 func BuildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
 	current := &HuffmanNode{}
-	for i := 0; i < len(nodes); i += 2 {
-		if len(nodes) < 2 {
-			return current
-		}
-
-		current.left = nodes[i]
-		current.right = nodes[i+1]
+	for len(nodes) > 2 {
+		current.left = nodes[0]
+		current.right = nodes[1]
 		current.weight = current.left.weight + current.right.weight
 
-		nodes = nodes[i+1:]
+		nodes = nodes[1:]
 		nodes = append(nodes, current)
 		nodes.Sort()
 	}
