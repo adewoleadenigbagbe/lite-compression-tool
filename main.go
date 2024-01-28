@@ -9,10 +9,15 @@ import (
 
 type HuffmanNodeArray []*HuffmanNode
 
-func (hf HuffmanNodeArray) Len() int           { return len(hf) }
-func (hf HuffmanNodeArray) Less(i, j int) bool { return hf[i].weight < hf[j].weight }
-func (hf HuffmanNodeArray) Swap(i, j int)      { hf[i], hf[j] = hf[j], hf[i] }
-func (hf HuffmanNodeArray) Sort()              { sort.Sort(hf) }
+func (hf HuffmanNodeArray) Len() int { return len(hf) }
+func (hf HuffmanNodeArray) Less(i, j int) bool {
+	if hf[i].weight == hf[j].weight {
+		return int64(hf[i].char) < int64(hf[j].char)
+	}
+	return hf[i].weight < hf[j].weight
+}
+func (hf HuffmanNodeArray) Swap(i, j int) { hf[i], hf[j] = hf[j], hf[i] }
+func (hf HuffmanNodeArray) Sort()         { sort.Sort(hf) }
 
 type HuffmanNode struct {
 	left   *HuffmanNode
@@ -56,18 +61,19 @@ func calculateCharacterFrequency(file *os.File) (map[byte]int64, error) {
 }
 
 func BuildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
-	current := &HuffmanNode{}
 	for len(nodes) >= 2 {
-		current.left = nodes[0]
-		current.right = nodes[1]
-		current.weight = current.left.weight + current.right.weight
-
-		nodes = nodes[1:]
+		current := &HuffmanNode{
+			weight: nodes[0].weight + nodes[1].weight,
+			left:   nodes[0],
+			right:  nodes[1],
+		}
 		nodes = append(nodes, current)
+		nodes = nodes[2:]
+
 		nodes.Sort()
 	}
 
-	return current
+	return nodes[0]
 }
 
 func PreOrderTraversal(root *HuffmanNode, table *[]HuffmanRow, frequencyTable map[byte]int64, codes string, code string) {
