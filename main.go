@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sort"
 )
@@ -98,37 +99,26 @@ func PreOrderTraversal(root *HuffmanNode, table *[]HuffmanRow, frequencyTable ma
 }
 
 func main() {
-	// var (
-	// 	err            error
-	// 	file           *os.File
-	// 	frequencyTable = make(map[byte]int64)
-	// )
+	var (
+		err            error
+		file           *os.File
+		frequencyTable = make(map[byte]int64)
+	)
 
-	// file, err = getFile("lesmiserables.txt")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	file, err = getFile("lesmiserables.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// defer file.Close()
+	defer file.Close()
 
-	// frequencyTable, err = calculateCharacterFrequency(file)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	freqTable := map[byte]int64{
-		67: 32,
-		68: 42,
-		69: 120,
-		75: 7,
-		76: 42,
-		77: 24,
-		85: 37,
-		90: 2,
+	frequencyTable, err = calculateCharacterFrequency(file)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	var nodes HuffmanNodeArray
-	for k, v := range freqTable {
+	for k, v := range frequencyTable {
 		node := &HuffmanNode{
 			char:   k,
 			weight: v,
@@ -150,7 +140,7 @@ func main() {
 	//pre order traversal
 	codes := ""
 	var table *[]HuffmanRow = &[]HuffmanRow{}
-	PreOrderTraversal(tree, table, freqTable, codes, "")
+	PreOrderTraversal(tree, table, frequencyTable, codes, "")
 
 	fmt.Println("\nPrinting huffman table")
 
