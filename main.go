@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"sort"
+	"strings"
 )
 
 type HuffmanNodeArray []*HuffmanNode
@@ -13,7 +15,7 @@ type HuffmanNodeArray []*HuffmanNode
 func (hf HuffmanNodeArray) Len() int { return len(hf) }
 func (hf HuffmanNodeArray) Less(i, j int) bool {
 	if hf[i].weight == hf[j].weight {
-		return int64(hf[i].char) < int64(hf[j].char)
+		return hf[i].char < hf[j].char
 	}
 	return hf[i].weight < hf[j].weight
 }
@@ -23,46 +25,58 @@ func (hf HuffmanNodeArray) Sort()         { sort.Sort(hf) }
 type HuffmanNode struct {
 	left   *HuffmanNode
 	right  *HuffmanNode
-	char   byte
+	char   rune
 	weight int64
-}
-
-type HuffmanRow struct {
-	char      string
-	frequency int64
-	code      string
-	bits      int
 }
 
 func getFile(filename string) (*os.File, error) {
 	return os.Open(filename)
 }
 
-func calculateCharacterFrequency(file *os.File) (map[byte]int64, error) {
-	const chunkSize = 10000
-	buffer := make([]byte, chunkSize)
-	frequencyTable := make(map[byte]int64)
+func writeToFile(filename string, rs []rune) error {
+	file, err := os.Create(filename) // Creates or truncates with os.O_RDWR mode
+	if err != nil {
+		return err
+	}
 
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, r := range rs {
+		_, err = writer.WriteRune(r)
+		if err != nil {
+			return err
+		}
+	}
+
+	writer.Flush() // Make sure to flush!
+
+	return nil
+}
+
+func calculateCharacterFrequency(file *os.File) (map[rune]int64, []rune, error) {
+	var runes []rune
+	frequencyTable := make(map[rune]int64)
+	reader := bufio.NewReader(file)
 	for {
-		n, err := file.Read(buffer)
+		r, _, err := reader.ReadRune()
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if err == io.EOF {
 			break
 		}
 
-		for _, v := range buffer[:n] {
-			frequencyTable[v]++
-		}
+		frequencyTable[r]++
+		runes = append(runes, r)
 	}
 
-	return frequencyTable, nil
+	return frequencyTable, runes, nil
 }
 
-func BuildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
-	for len(nodes) >= 2 {
+func buildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
+	for len(nodes) > 1 {
 		current := &HuffmanNode{
 			weight: nodes[0].weight + nodes[1].weight,
 			left:   nodes[0],
@@ -77,7 +91,7 @@ func BuildHuffmanTree(nodes HuffmanNodeArray) *HuffmanNode {
 	return nodes[0]
 }
 
-func PreOrderTraversal(root *HuffmanNode, table *[]HuffmanRow, frequencyTable map[byte]int64, codes string, code string) {
+func generateCodes(root *HuffmanNode, characterCodeMap map[rune]string, frequencyTable map[rune]int64, codes string, code string) {
 	if root == nil {
 		codes = codes[:len(codes)-1]
 		return
@@ -85,24 +99,38 @@ func PreOrderTraversal(root *HuffmanNode, table *[]HuffmanRow, frequencyTable ma
 
 	codes += code
 	if root.char != 0 {
-		row := HuffmanRow{
-			char:      string(root.char),
-			frequency: frequencyTable[root.char],
-			code:      codes,
-			bits:      len(codes),
-		}
-		*table = append(*table, row)
+		characterCodeMap[root.char] = codes
 	}
 
-	PreOrderTraversal(root.left, table, frequencyTable, codes, "0")
-	PreOrderTraversal(root.right, table, frequencyTable, codes, "1")
+	generateCodes(root.left, characterCodeMap, frequencyTable, codes, "0")
+	generateCodes(root.right, characterCodeMap, frequencyTable, codes, "1")
+}
+
+func decode(root *HuffmanNode, encoded string) []rune {
+	current := root
+	var b []rune
+	for i := 0; i < len(encoded); i++ {
+		if encoded[i] == 48 {
+			current = current.left
+		} else {
+			current = current.right
+		}
+
+		if current.left == nil && current.right == nil {
+			b = append(b, current.char)
+			current = root
+		}
+	}
+
+	return b
 }
 
 func main() {
 	var (
 		err            error
 		file           *os.File
-		frequencyTable = make(map[byte]int64)
+		frequencyTable = make(map[rune]int64)
+		characterArray = make([]rune, 0)
 	)
 
 	file, err = getFile("lesmiserables.txt")
@@ -112,11 +140,10 @@ func main() {
 
 	defer file.Close()
 
-	frequencyTable, err = calculateCharacterFrequency(file)
+	frequencyTable, characterArray, err = calculateCharacterFrequency(file)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	var nodes HuffmanNodeArray
 	for k, v := range frequencyTable {
 		node := &HuffmanNode{
@@ -135,14 +162,24 @@ func main() {
 	nodes.Sort()
 
 	// build tree
-	tree := BuildHuffmanTree(nodes)
+	tree := buildHuffmanTree(nodes)
+
+	codes := ""
+	m := make(map[rune]string)
 
 	//pre order traversal
-	codes := ""
-	var table *[]HuffmanRow = &[]HuffmanRow{}
-	PreOrderTraversal(tree, table, frequencyTable, codes, "")
+	generateCodes(tree, m, frequencyTable, codes, "")
 
-	fmt.Println("\nPrinting huffman table")
+	var sb strings.Builder
+	for _, v := range characterArray {
+		sb.WriteString(m[v])
+	}
 
-	fmt.Println(table)
+	decodedString := decode(tree, sb.String())
+	err = writeToFile("decoded_lesmiserables.txt", decodedString)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("done")
 }
