@@ -7,7 +7,7 @@ Huffman Coding is a data compression algorithm that is used to reduce the size o
 For more information on huffman coding , visit this link [Huffman Coding](https://en.wikipedia.org/wiki/Huffman_coding)
 
 
-For this example, a text file lesmiserables.txt included in the repo , text file used contains not only ASCII characters but other characters in any language
+For this example, a text file **lesmiserables.txt** included in the repo , text file used contains not only ASCII characters but other characters in any language
 
 ## Usage
-Clone the Repository, check in on the root folder and run the main.go file, you see a decoded_lesmiserables.txt being generated
+Clone the Repository, check in on the root folder and run the main.go file, you see a **decoded_lesmiserables.txt** being generated
