@@ -9,5 +9,5 @@ For more information on huffman coding , visit this link [Huffman Coding](https:
 
 For this example, a text file lesmiserables.txt included in the repo , text file used contains not only ASCII characters but other characters in any language
 
-Usage
+## Usage
 Clone the Repository, check in on the root folder and run the main.go file, you see a decoded_lesmiserables.txt being generated
